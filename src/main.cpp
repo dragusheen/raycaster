@@ -56,10 +56,8 @@ std::vector<sf::RectangleShape> walls;
 std::vector<sf::RectangleShape> map_grid;
 
 /*  ---- RAYS ---- */
-int ray_count = 120;
+int ray_count = 1920;
 std::vector<sf::VertexArray> rays;
-sf::Font font;
-sf::Text rays_text;
 
 /*  ---- FUNCTION ---- */
 /*  ---- PLAYER ---- */
@@ -68,6 +66,7 @@ void setPlayerDelta(void)
     player_delta.x = cos(player_angle) * player_speed;
     player_delta.y = sin(player_angle) * player_speed;
 }
+
 void initPlayer(void)
 {
     player.setRadius(player_size);
@@ -178,21 +177,6 @@ void drawGrid(sf::RenderWindow &window)
 }
 
 /*  ---- RAYS ---- */
-void initRaysText(void)
-{
-    font.loadFromFile("assets/fonts/SuperMario256.ttf");
-    rays_text.setFont(font);
-    rays_text.setCharacterSize(24);
-    rays_text.setFillColor(sf::Color::Black);
-    sf::FloatRect textRect = rays_text.getLocalBounds();
-    rays_text.setPosition(sf::Vector2f(window_width - textRect.width - 10, 10));
-}
-
-void drawRaysText(sf::RenderWindow &window)
-{
-    window.draw(rays_text);
-}
-
 float dist(float x1, float y1, float x2, float y2)
 {
     return sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
@@ -342,22 +326,6 @@ void initRays(void)
     updateRays();
 }
 
-void updateRaysText(void)
-{
-    rays_text.setString("Rays: " + std::to_string(ray_count));
-    rays_text.setPosition(sf::Vector2f(window_width - rays_text.getLocalBounds().width - 10, 10));
-}
-
-void modifyRaysCount(sf::Event event)
-{
-    if (event.key.code == sf::Keyboard::P) ray_count *= 2;
-    if (event.key.code == sf::Keyboard::M) ray_count /= 2;
-    if (event.key.code == sf::Keyboard::R) ray_count = 120;
-    if (ray_count < 15) ray_count = 15;
-    if (ray_count > 3840) ray_count = 3840;
-    initRays();
-}
-
 void drawRays(sf::RenderWindow &window)
 {
     for (auto &ray : rays) window.draw(ray);
@@ -381,29 +349,25 @@ int main(void)
     initMap();
     initGrid();
     initRays();
-    initRaysText();
 
     while (twoD_window.isOpen() && threeD_window.isOpen()) {
         sf::Event event;
         while (twoD_window.pollEvent(event)) {
             if (event.type == sf::Event::Closed) twoD_window.close();
             if (event.type == sf::Event::KeyPressed) movePlayer(event);
-            if (event.type == sf::Event::KeyPressed) modifyRaysCount(event);
         }
         while (threeD_window.pollEvent(event)) {
             if (event.type == sf::Event::Closed) threeD_window.close();
             if (event.type == sf::Event::KeyPressed) movePlayer(event);
-            if (event.type == sf::Event::KeyPressed) modifyRaysCount(event);
         }
 
         updatePlayer();
-        updateRaysText();
+        updateRays();
 
         twoD_window.clear(sf::Color(50, 50, 50));
         drawMap(twoD_window);
         drawGrid(twoD_window);
         drawRays(twoD_window);
-        drawRaysText(twoD_window);
         drawPlayer(twoD_window);
         twoD_window.display();
 
