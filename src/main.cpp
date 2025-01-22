@@ -7,11 +7,14 @@
 */
 
 /*  ---- INCLUDES ---- */
-#include <SFML/Graphics.hpp>
-#include <SFML/Window.hpp>
-#include <SFML/System.hpp>
 #include <cmath>
 #include <iostream>
+#include "GradeDe/Vector.hpp"
+#include "GradeDe/CircleShape.hpp"
+#include "GradeDe/RectangleShape.hpp"
+#include "GradeDe/VertexArray.hpp"
+#include "GradeDe/Window.hpp"
+#include "GradeDe/Event.hpp"
 
 /*  ---- VARIABLES ---- */
 /*  ---- MATH ---- */
@@ -26,14 +29,15 @@ float window_height = 0;
 
 /*  ---- PLAYER ---- */
 float player_size = 4;
-float player_speed = 5;
-float player_rotation_speed = 0.1;
-sf::Vector2f player_position = sf::Vector2f(0, 0);
+float player_speed = 4;
+float player_rotation_speed = 0.05;
+gd::Vector<float> player_position = gd::Vector<float>(0, 0);
 float player_angle = 0;
-sf::Vector2f player_delta = sf::Vector2f(0, 0);
+gd::Vector<float> player_delta = gd::Vector<float>(0, 0);
 int player_view_angle = 60;
-sf::CircleShape player;
-sf::RectangleShape player_direction;
+int player_view_distance = 200;
+gd::CircleShape player;
+gd::RectangleShape player_direction;
 
 /*  ---- MAP ---- */
 float mapX = 8;
@@ -49,17 +53,24 @@ std::vector<std::vector<int>> map = {
     {1, 0, 0, 0, 0, 0, 0, 1},
     {1, 1, 1, 1, 1, 1, 1, 1}
 };
-std::vector<sf::RectangleShape> map_rectangles;
-std::vector<sf::RectangleShape> walls;
+std::vector<gd::RectangleShape> map_rectangles;
+std::vector<gd::RectangleShape> walls;
 
 /*  ---- GRID ---- */
-std::vector<sf::RectangleShape> map_grid;
+std::vector<gd::RectangleShape> map_grid;
 
 /*  ---- RAYS ---- */
 int ray_count = 1920;
-std::vector<sf::VertexArray> rays;
+std::vector<gd::VertexArray> rays;
+
 
 /*  ---- FUNCTION ---- */
+/*  ---- MATH ---- */
+float dist(float x1, float y1, float x2, float y2)
+{
+    return sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+}
+
 /*  ---- PLAYER ---- */
 void setPlayerDelta(void)
 {
@@ -69,52 +80,68 @@ void setPlayerDelta(void)
 
 void initPlayer(void)
 {
-    player.setRadius(player_size);
-    player.setOrigin(player_size, player_size);
-    player.setFillColor(sf::Color::Yellow);
+    player.create(player_size);
+    player.setOrigin(gd::Vector<float>(player_size, player_size));
+    player.setFillColor(gd::Color::Yellow);
 
-    player_position = sf::Vector2f(map_cell_size * map[0].size() / 2, map_cell_size * map.size() / 2);
+    player_position = gd::Vector<float>(map_cell_size * map[0].size() / 2, map_cell_size * map.size() / 2);
     player.setPosition(player_position);
 
-    player_direction.setSize(sf::Vector2f(player_size * 3, 2));
-    player_direction.setOrigin(0, 1);
-    player_direction.setFillColor(sf::Color::Yellow);
+    player_direction.create(gd::Vector<float>(player_size * 3, 2));
+    player_direction.setOrigin(gd::Vector<float>(0, 1));
+    player_direction.setFillColor(gd::Color::Yellow);
     player_direction.setPosition(player_position);
     player_direction.setRotation(player_angle * 180 / PI);
     setPlayerDelta();
 }
 
-void drawPlayer(sf::RenderWindow &window)
+void drawPlayer(gd::Window &window)
 {
     window.draw(player);
     window.draw(player_direction);
 }
 
-void movePlayer(sf::Event event)
+void movePlayerForward(void)
 {
-    if (event.key.code == sf::Keyboard::Q || event.key.code == sf::Keyboard::Left)  {
-        player_angle -= player_rotation_speed;
-        if (player_angle < 0)
-            player_angle += 2 * PI;
-        setPlayerDelta();
-    }
-    if (event.key.code == sf::Keyboard::D || event.key.code == sf::Keyboard::Right) {
-        player_angle += player_rotation_speed;
-        if (player_angle > 2 * PI)
-            player_angle -= 2 * PI;
-        setPlayerDelta();
-    }
-    if (event.key.code == sf::Keyboard::Z || event.key.code == sf::Keyboard::Up) {
-        sf::Vector2f new_position = sf::Vector2f(player_position.x + player_delta.x, player_position.y + player_delta.y);
-        if (map[(int)(new_position.y / map_cell_size)][(int)(new_position.x / map_cell_size)] == 1) return;
-        player_position.x += player_delta.x;
-        player_position.y += player_delta.y;
-    }
-    if (event.key.code == sf::Keyboard::S || event.key.code == sf::Keyboard::Down) {
-        sf::Vector2f new_position = sf::Vector2f(player_position.x - player_delta.x, player_position.y - player_delta.y);
-        if (map[(int)(new_position.y / map_cell_size)][(int)(new_position.x / map_cell_size)] == 1) return;
-        player_position.x -= player_delta.x;
-        player_position.y -= player_delta.y;
+    gd::Vector<float> new_position = gd::Vector<float>(player_position.x + player_delta.x, player_position.y + player_delta.y);
+    if (map[(int)(new_position.y / map_cell_size)][(int)(new_position.x / map_cell_size)] == 1) return;
+    player_position = new_position;
+}
+
+void movePlayerBackward(void)
+{
+    gd::Vector<float> new_position = gd::Vector<float>(player_position.x - player_delta.x, player_position.y - player_delta.y);
+    if (map[(int)(new_position.y / map_cell_size)][(int)(new_position.x / map_cell_size)] == 1) return;
+    player_position = new_position;
+}
+
+void movePlayerLeft(void)
+{
+    player_angle -= player_rotation_speed;
+    if (player_angle < 0)
+        player_angle += 2 * PI;
+    setPlayerDelta();
+}
+
+void movePlayerRight(void)
+{
+    player_angle += player_rotation_speed;
+    if (player_angle > 2 * PI)
+        player_angle -= 2 * PI;
+    setPlayerDelta();
+}
+
+void movePlayer(gd::Event event)
+{
+    if (event.keyBoard.getKeyState(gd::KeyBoard::Key::Q) == gd::KeyBoard::State::Pressed || event.keyBoard.getKeyState(gd::KeyBoard::Key::Left) == gd::KeyBoard::State::Pressed) movePlayerLeft();
+    if (event.keyBoard.getKeyState(gd::KeyBoard::Key::D) == gd::KeyBoard::State::Pressed || event.keyBoard.getKeyState(gd::KeyBoard::Key::Right) == gd::KeyBoard::State::Pressed) movePlayerRight();
+    if (event.keyBoard.getKeyState(gd::KeyBoard::Key::Z) == gd::KeyBoard::State::Pressed || event.keyBoard.getKeyState(gd::KeyBoard::Key::Up) == gd::KeyBoard::State::Pressed) movePlayerForward();
+    if (event.keyBoard.getKeyState(gd::KeyBoard::Key::S) == gd::KeyBoard::State::Pressed || event.keyBoard.getKeyState(gd::KeyBoard::Key::Down) == gd::KeyBoard::State::Pressed) movePlayerBackward();
+    if (event.joyStick.isConnected()) {
+        if (event.joyStick.getXAxisPosition(true) > 50) movePlayerRight();
+        if (event.joyStick.getXAxisPosition(false) < -50) movePlayerLeft();
+        if (event.joyStick.getYAxisPosition(true) > 50) movePlayerBackward();
+        if (event.joyStick.getYAxisPosition(false) < -50) movePlayerForward();
     }
 }
 
@@ -131,21 +158,21 @@ void initMap(void)
     for (int i = 0; i < map.size(); i++) {
         for (int j = 0; j < map[i].size(); j++) {
             if (map[i][j] == 0) continue;
-            sf::RectangleShape rectangle;
-            rectangle.setSize(sf::Vector2f(map_cell_size, map_cell_size));
-            rectangle.setPosition(sf::Vector2f(j * map_cell_size, i * map_cell_size));
-            rectangle.setFillColor(sf::Color::White);
+            gd::RectangleShape rectangle;
+            rectangle.create(gd::Vector<float>(map_cell_size, map_cell_size));
+            rectangle.setPosition(gd::Vector<float>(j * map_cell_size, i * map_cell_size));
+            rectangle.setFillColor(gd::Color::White);
             map_rectangles.push_back(rectangle);
         }
     }
 }
 
-void drawMap(sf::RenderWindow &window)
+void drawMap(gd::Window &window)
 {
-    for(auto &rectangle : map_rectangles) window.draw(rectangle);
+    for (auto &rectangle : map_rectangles) window.draw(rectangle);
 }
 
-void drawWalls(sf::RenderWindow &window)
+void drawWalls(gd::Window &window)
 {
     for (auto &wall : walls) window.draw(wall);
 }
@@ -153,33 +180,41 @@ void drawWalls(sf::RenderWindow &window)
 /*  ---- GRID ---- */
 void initGrid(void)
 {
-    sf::Color gray(120, 120, 120);
+    gd::Color gray(120, 120, 120);
     float size = 2;
     for (int i = 0; i < map.size(); i++) {
-        sf::RectangleShape rectangle;
-        rectangle.setSize(sf::Vector2f(800, size));
-        rectangle.setPosition(sf::Vector2f(0, i * map_cell_size - size / 2));
+        gd::RectangleShape rectangle;
+        rectangle.create(gd::Vector<float>(800, size));
+        rectangle.setPosition(gd::Vector<float>(0, i * map_cell_size - size / 2));
         rectangle.setFillColor(gray);
         map_grid.push_back(rectangle);
     }
     for (int i = 0; i < map[0].size(); i++) {
-        sf::RectangleShape rectangle;
-        rectangle.setSize(sf::Vector2f(size, 800));
-        rectangle.setPosition(sf::Vector2f(i * map_cell_size - size / 2, 0));
+        gd::RectangleShape rectangle;
+        rectangle.create(gd::Vector<float>(size, 800));
+        rectangle.setPosition(gd::Vector<float>(i * map_cell_size - size / 2, 0));
         rectangle.setFillColor(gray);
         map_grid.push_back(rectangle);
     }
 }
 
-void drawGrid(sf::RenderWindow &window)
+void drawGrid(gd::Window &window)
 {
     for (auto &line : map_grid) window.draw(line);
 }
 
 /*  ---- RAYS ---- */
-float dist(float x1, float y1, float x2, float y2)
+void initRays(void)
 {
-    return sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+    rays.clear();
+    for (int i = 0; i < ray_count; i++) {
+        gd::VertexArray ray(gd::Lines, 2);
+        ray[0].position = player_position;
+        ray[1].position = player_position;
+        ray[0].color = gd::Color::Red;
+        ray[1].color = gd::Color::Red;
+        rays.push_back(ray);
+    }
 }
 
 void updateRays(void)
@@ -279,31 +314,34 @@ void updateRays(void)
             }
         }
 
-        sf::RectangleShape rectangle;
+        gd::Color color = gd::Color::Red;
         if (distH < distV) {
             rx = hx;
             ry = hy;
             distT = distH;
-            rectangle.setFillColor(sf::Color::Red);
         } else {
             rx = vx;
             ry = vy;
             distT = distV;
-            rectangle.setFillColor(sf::Color(200, 0, 0));
+            color.r = 200;
         }
 
         rays[i][0].position = player_position;
-        rays[i][1].position = sf::Vector2f(rx, ry);
+        rays[i][1].position = gd::Vector<float>(rx, ry);
 
         float ca = player_angle - ra;
         if (ca < 0) ca += 2 * PI;
         if (ca > 2 * PI) ca -= 2 * PI;
         distT *= cos(ca);
+        if (distT > player_view_distance) color.a = 255 - distT + player_view_distance;
+        if (color.a < 0) color.a = 0;
 
+        gd::RectangleShape rectangle;
         float wallH = (map_cell_size * window_height) / distT;
         wallH = (wallH > window_height) ? window_height : wallH;
-        rectangle.setSize(sf::Vector2f(window_width / ray_count, wallH));
-        rectangle.setPosition(sf::Vector2f(i * (window_width / ray_count), window_height / 2 - wallH / 2));
+        rectangle.setSize(gd::Vector<float>(window_width / ray_count, wallH));
+        rectangle.setPosition(gd::Vector<float>(i * (window_width / ray_count), window_height / 2 - wallH / 2));
+        rectangle.setFillColor(color);
         walls.push_back(rectangle);
 
         ra += (float)((float)(player_view_angle) / (float)(ray_count)) * DR;
@@ -312,21 +350,7 @@ void updateRays(void)
     }
 }
 
-void initRays(void)
-{
-    rays.clear();
-    for (int i = 0; i < ray_count; i++) {
-        sf::VertexArray ray(sf::Lines, 2);
-        ray[0].position = player_position;
-        ray[1].position = player_position;
-        ray[0].color = sf::Color::Red;
-        ray[1].color = sf::Color::Red;
-        rays.push_back(ray);
-    }
-    updateRays();
-}
-
-void drawRays(sf::RenderWindow &window)
+void drawRays(gd::Window &window)
 {
     for (auto &ray : rays) window.draw(ray);
 }
@@ -334,16 +358,20 @@ void drawRays(sf::RenderWindow &window)
 /*  ---- MAIN ---- */
 int main(void)
 {
+    gd::Vector<unsigned int> desktop_size = gd::Window::getDesktopSize();
     window_width = map_cell_size * map[0].size();
     window_height = map_cell_size * map.size();
-    sf::RenderWindow twoD_window(sf::VideoMode(window_width, window_height), "2D Raycaster");
-    sf::RenderWindow threeD_window(sf::VideoMode(window_width, window_height), "3D Raycaster");
-    twoD_window.setFramerateLimit(60);
-    threeD_window.setFramerateLimit(60);
-
-    sf::VideoMode desktop = sf::VideoMode::getDesktopMode();
-    twoD_window.setPosition(sf::Vector2i(desktop.width / 3 - twoD_window.getSize().x / 2, desktop.height / 2 - twoD_window.getSize().y / 2));
-    threeD_window.setPosition(sf::Vector2i(desktop.width / 3 * 2 - threeD_window.getSize().x / 2, desktop.height / 2 - threeD_window.getSize().y / 2));
+    gd::Window twoD_window;
+    twoD_window.create(window_width, window_height, "2D Raycaster");
+    twoD_window.setFramerateLimit(24);
+    twoD_window.setPosition(gd::Vector<int>(desktop_size.x / 4 - window_width / 2, desktop_size.y / 2 - window_height / 2));
+    window_width = 800;
+    window_height = 600;
+    gd::Window threeD_window;
+    threeD_window.create(window_width, window_height, "3D Raycaster");
+    threeD_window.setFramerateLimit(24);
+    threeD_window.setPosition(gd::Vector<int>(desktop_size.x / 4 * 3 - window_width / 2, desktop_size.y / 2 - window_height / 2));
+    gd::Event event;
 
     initPlayer();
     initMap();
@@ -351,27 +379,24 @@ int main(void)
     initRays();
 
     while (twoD_window.isOpen() && threeD_window.isOpen()) {
-        sf::Event event;
-        while (twoD_window.pollEvent(event)) {
-            if (event.type == sf::Event::Closed) twoD_window.close();
-            if (event.type == sf::Event::KeyPressed) movePlayer(event);
-        }
-        while (threeD_window.pollEvent(event)) {
-            if (event.type == sf::Event::Closed) threeD_window.close();
-            if (event.type == sf::Event::KeyPressed) movePlayer(event);
-        }
+        twoD_window.pollEvent(event);
+        if (event.close()) twoD_window.close();
+        movePlayer(event);
+        threeD_window.pollEvent(event);
+        if (event.close()) threeD_window.close();
+        movePlayer(event);
 
         updatePlayer();
         updateRays();
 
-        twoD_window.clear(sf::Color(50, 50, 50));
+        twoD_window.clear(gd::Color(50, 50, 50));
         drawMap(twoD_window);
         drawGrid(twoD_window);
         drawRays(twoD_window);
         drawPlayer(twoD_window);
         twoD_window.display();
 
-        threeD_window.clear(sf::Color(50, 50, 50));
+        threeD_window.clear(gd::Color(50, 50, 50));
         drawWalls(threeD_window);
         threeD_window.display();
     }
