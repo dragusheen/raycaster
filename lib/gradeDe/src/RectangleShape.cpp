@@ -11,7 +11,7 @@
 
 namespace gd
 {
-    void RectangleShape::create(gd::Vector<float> size)
+    RectangleShape::RectangleShape(gd::Vector<float> size)
     {
         _size = size;
         _shape.setSize({size.x, size.y});

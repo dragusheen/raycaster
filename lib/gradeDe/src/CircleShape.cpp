@@ -11,7 +11,7 @@
 
 namespace gd
 {
-    void CircleShape::create(float radius)
+    CircleShape::CircleShape(float radius)
     {
         _radius = radius;
         _shape.setRadius(radius);

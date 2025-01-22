@@ -22,10 +22,9 @@ namespace gd
     class CircleShape
     {
         public:
-            CircleShape() = default;
+            CircleShape(float radius);
             ~CircleShape() = default;
 
-            void create(float radius);
             void setFillColor(gd::Color color);
             void setOutlineColor(gd::Color color);
             void setOutlineThickness(float thickness);

@@ -22,10 +22,9 @@ namespace gd
     class RectangleShape
     {
         public:
-            RectangleShape() = default;
+            RectangleShape(gd::Vector<float> size);
             ~RectangleShape() = default;
 
-            void create(gd::Vector<float> size);
             void setFillColor(gd::Color color);
             void setOutlineColor(gd::Color color);
             void setOutlineThickness(float thickness);
